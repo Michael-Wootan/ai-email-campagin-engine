@@ -1,0 +1,130 @@
+name: Email Campaigns
+
+on:
+  schedule:
+    - cron: '0 2 * * 5'    # Thursday 10pm EDT (02:00 UTC Friday) — generate drafts + email preview
+    - cron: '0 21 * * 5'   # Friday 5pm EDT (21:00 UTC) — process REDO/HOLD replies, then schedule sends
+    - cron: '0 0 * * 6'    # Friday 8pm EDT (00:00 UTC Saturday) — catch-up scheduler pass (schedules drafts updated by redos)
+    - cron: '0 23 * * 4'   # Thursday 7pm EDT (23:00 UTC) — review: pull open/click stats into the learning history
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Run mode'
+        required: true
+        default: 'generate'
+        type: choice
+        options:
+          - generate         # Create campaigns + email preview to the owner
+          - schedule         # Check for HOLD/REDO reply, then schedule sends
+          - review           # Pull open/click stats, update learning history
+          - check-feedback   # Check the inbox for REDO replies, process them
+          - redo             # Redo specific emails (use redo_args)
+      redo_args:
+        description: 'Redo arguments (e.g. "4" or "2,4" or "wholesale")'
+        required: false
+        type: string
+      feedback:
+        description: 'Feedback to inject (used with redo mode)'
+        required: false
+        type: string
+
+# Prevent overlapping runs
+concurrency:
+  group: email-campaigns
+  cancel-in-progress: false
+
+# State (state/campaign-state.json, state/campaign-history.json) is carried
+# between the Thursday and Friday runs in the Actions cache, never committed.
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install --omit=dev --no-audit --no-fund
+
+      # Restore the most recent campaign state from the Actions cache
+      - name: Restore campaign state
+        uses: actions/cache/restore@v4
+        with:
+          path: state
+          key: campaign-state-${{ github.run_id }}
+          restore-keys: campaign-state-
+
+      # Determine which mode to run
+      - name: Set run mode
+        id: mode
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          SCHEDULE:   ${{ github.event.schedule }}
+          INPUT_MODE: ${{ inputs.mode }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then MODE="$INPUT_MODE"
+          elif [ "$SCHEDULE" = "0 2 * * 5" ];  then MODE=generate
+          elif [ "$SCHEDULE" = "0 21 * * 5" ]; then MODE=schedule
+          elif [ "$SCHEDULE" = "0 0 * * 6" ];  then MODE=schedule
+          elif [ "$SCHEDULE" = "0 23 * * 4" ]; then MODE=review
+          else MODE=generate
+          fi
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "Running in mode: $MODE"
+
+      - name: Run campaign generator
+        env:
+          MODE:      ${{ steps.mode.outputs.mode }}
+          REDO_ARGS: ${{ inputs.redo_args }}
+          FEEDBACK:  ${{ inputs.feedback }}
+          STORE_NAME:                        ${{ vars.STORE_NAME }}
+          STORE_URL:                         ${{ vars.STORE_URL }}
+          OWNER_EMAIL:                       ${{ vars.OWNER_EMAIL }}
+          FROM_NAME:                         ${{ vars.FROM_NAME }}
+          FROM_EMAIL:                        ${{ vars.FROM_EMAIL }}
+          SMTP_HOST:                         ${{ vars.SMTP_HOST }}
+          SMTP_PORT:                         ${{ vars.SMTP_PORT }}
+          RETAIL_PATH:                       ${{ vars.RETAIL_PATH }}
+          WHOLESALE_PATH:                    ${{ vars.WHOLESALE_PATH }}
+          LOGO_URL:                          ${{ vars.LOGO_URL }}
+          PROMO_PREFIX:                      ${{ vars.PROMO_PREFIX }}
+          SHOPIFY_BLOG_ID:                   ${{ vars.SHOPIFY_BLOG_ID }}
+          SHOPIFY_BLOG_HANDLE:               ${{ vars.SHOPIFY_BLOG_HANDLE }}
+          NEWS_QUERIES:                      ${{ vars.NEWS_QUERIES }}
+          EXPORT_ELIGIBLE_PATTERN:           ${{ vars.EXPORT_ELIGIBLE_PATTERN }}
+          INTERNATIONAL_HERO_PATTERN:        ${{ vars.INTERNATIONAL_HERO_PATTERN }}
+          LINK_CHECK_SKIP:                   ${{ vars.LINK_CHECK_SKIP }}
+          REVIEW_RATING:                     ${{ vars.REVIEW_RATING }}
+          REVIEW_COUNT:                      ${{ vars.REVIEW_COUNT }}
+          REVIEW_SOURCE:                     ${{ vars.REVIEW_SOURCE }}
+          REVIEW_PROFILE_URL:                ${{ vars.REVIEW_PROFILE_URL }}
+          IMAP_HOST:                         ${{ vars.IMAP_HOST }}
+          MAILERLITE_API_KEY:                ${{ secrets.MAILERLITE_API_KEY }}
+          MAILERLITE_RETAIL_GROUP_ID:        ${{ secrets.MAILERLITE_RETAIL_GROUP_ID }}
+          MAILERLITE_WHOLESALE_GROUP_ID:     ${{ secrets.MAILERLITE_WHOLESALE_GROUP_ID }}
+          MAILERLITE_INTERNATIONAL_GROUP_ID: ${{ secrets.MAILERLITE_INTERNATIONAL_GROUP_ID }}
+          SHOPIFY_ADMIN_TOKEN:               ${{ secrets.SHOPIFY_ADMIN_TOKEN }}
+          SHOPIFY_STORE:                     ${{ secrets.SHOPIFY_STORE }}
+          ANTHROPIC_API_KEY:                 ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY:                    ${{ secrets.GEMINI_API_KEY }}
+          MAIL_USER:                         ${{ secrets.MAIL_USER }}
+          MAIL_APP_PASSWORD:                 ${{ secrets.MAIL_APP_PASSWORD }}
+        # Inputs are passed as env vars and quoted arguments — never eval'd —
+        # so free-text feedback can't inject shell commands.
+        run: |
+          ARGS=("--$MODE")
+          if [ "$MODE" = "redo" ] && [ -n "$REDO_ARGS" ]; then ARGS+=("$REDO_ARGS"); fi
+          if [ -n "$FEEDBACK" ]; then ARGS+=("--feedback" "$FEEDBACK"); fi
+          echo "Running: node src/campaign-generator.js ${ARGS[*]}"
+          node src/campaign-generator.js "${ARGS[@]}"
+
+      # Save state for the next run (cache entries are immutable, so each run
+      # writes a new key and the next run restores the newest one)
+      - name: Save campaign state
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: state
+          key: campaign-state-${{ github.run_id }}

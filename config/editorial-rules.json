@@ -1,0 +1,11 @@
+{
+  "_comment": "Persistent editorial rules — the owner's standing feedback, enforced in code by creative-engine.js and injected into every writer prompt. Update this file whenever the owner gives feedback; it survives between weeks (unlike prompt tweaks). Entries below are examples of the format.",
+  "banned_hero_products": [
+    { "match": "product a classic", "reason": "owner 2026-08-08: overexposed — 'it always recycles the same hero'", "added": "2026-08-15" },
+    { "match": "product b original", "reason": "owner 2026-08-08: overexposed", "added": "2026-08-15" }
+  ],
+  "banned_subject_skeletons": [
+    { "pattern": "\\b\\d+\\s+reviews?\\b", "example": "120 reviews. 4.8 stars.", "reason": "used four times in six weeks — retired" }
+  ],
+  "hero_cooldown_days": 28
+}

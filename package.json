@@ -1,0 +1,23 @@
+{
+  "name": "ai-email-campaign-engine",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Weekly AI-planned email campaigns from Shopify data, drafted in MailerLite, gated by an owner HOLD/REDO email reply, with an open/click learning loop.",
+  "main": "src/campaign-generator.js",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "generate": "node src/campaign-generator.js --generate",
+    "schedule": "node src/campaign-generator.js --schedule",
+    "review": "node src/campaign-generator.js --review",
+    "check-feedback": "node src/campaign-generator.js --check-feedback",
+    "cleanup-sales": "node src/campaign-generator.js --cleanup-sales",
+    "sample": "node scripts/render-samples.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.80.0",
+    "dotenv": "^17.3.1",
+    "imap": "^0.8.19",
+    "mailparser": "^3.9.6",
+    "nodemailer": "^8.0.11"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "_comment": "Copy to reviews.json. Fill ONLY from an official export or API of your review platform. Quotes are rendered verbatim with attribution; the pipeline never writes, edits, or invents reviews. Leave 'aggregate' out to omit rating strips. Fewer than 2 reviews disables the social_proof campaign type.",
+  "aggregate": { "value": 4.8, "count": 120, "source": "Your review platform", "url": "https://reviews.example.com/your-store" },
+  "reviews": [
+    { "quote": "Paste a real review here, verbatim.", "author_label": "Verified buyer", "rating": 5, "source": "Your review platform", "date": "2026-05-01", "product": "Product A" }
+  ]
+}

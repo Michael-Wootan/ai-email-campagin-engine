@@ -1,0 +1,11 @@
+{
+  "_comment": "Copy to weekly-directives.json. Ignored unless week_of equals the Monday of the week being generated. Omit a segment to leave it fully autonomous; 'skip' plans zero emails for it. 'deadlines' is the ONLY way (besides a live store discount with an end date) to unlock urgency/countdown copy.",
+  "week_of": "2026-10-19",
+  "retail": "skip — no retail sends this week.",
+  "wholesale": "Feature the new seasonal batch. Angle for distributors: fresh availability, selection, volume tiers. No discount codes — full price, product-led. Do not reuse the angle or subject skeleton from last month's launch email.",
+  "international": "Feature the new seasonal batch, international-eligible lines only. Quote-only — do NOT state any prices. Angle: selection, export-scale volume, request a quote / sample.",
+  "notes": "Week of Oct 19 is wholesale + international only.",
+  "deadlines": {
+    "wholesale": "2026-10-24"
+  }
+}

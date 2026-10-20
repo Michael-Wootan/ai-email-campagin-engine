@@ -1,0 +1,10 @@
+node_modules/
+.env
+.env.*
+!.env.example
+credentials*.json
+state/
+config/reviews.json
+config/weekly-directives.json
+*.log
+.DS_Store
